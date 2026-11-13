@@ -1,0 +1,54 @@
+SoundFlow Studio v0.5 — 视频配乐编辑器（音乐 / 音效 / 智能人声避让）
+
+一、和 v0.4 的区别
+- 从"三个独立工具页"改成"一个项目 = 一个时间轴编辑器"。
+- 音乐、音效都在编辑器里生成或导入，直接拖到时间轴上编排。
+- 人声避让改为用户主动触发：点工具栏「智能人声避让」才识别讲话、才压低音乐。
+  开启前音乐保持原样，可随时关闭，或用「避让前 / 避让后」对比。
+- 支持批量：首页一次选择多个视频，可选自动生成配乐 + 自动避让，完成后逐个进编辑器精修。
+
+二、编辑器能做什么
+- 多轨：原视频对白 / 背景音乐 / 多条音效轨（可加轨）/ 讲话区间。
+- 片段：拖动移动、跨轨移动、拖边裁剪、播放头分割、删除、音量、淡入淡出，吸附对齐。
+- 每条音轨：静音、是否参与人声避让。
+- 人声避让：压低幅度、停顿合并、恢复速度、提前压低、结束保持；讲话区间可拖动/新增/删除。
+- 实时试听：浏览器 Web Audio 实时混音，参数调整立即生效，不重复调用 AI。
+- 撤销/重做、自动保存。
+- 快捷键：空格 播放/暂停，S 分割，Delete 删除，Ctrl/Cmd+Z 撤销，Shift+Cmd+Z 重做，左/右方向键 微移播放头。
+
+三、导出（不重新编码视频）
+- 配乐混音（音乐+音效，已避让，不含对白）  <- 推荐交给视频编辑器
+- 背景音乐分轨 / 音效分轨 / 完整预混（含对白，用于审听）
+- 工程文件 JSON（时间轴、片段、讲话区间、参数），可给其它编辑器或 API 使用
+- 连接本地服务时由 FFmpeg 渲染（与未来阿里云 FC 同一代码）；离线时浏览器内渲染。
+
+四、离线体验
+直接打开 SoundFlow_Studio_v0.5_交互预览.html：示例项目可完整编辑、避让、导出。
+离线模式不调用 AI，也不会伪造生成结果。
+
+五、在 Mac 启动完整服务
+1. Python 3.10+，FFmpeg（brew install ffmpeg）
+2. python3 -m venv .venv && source .venv/bin/activate
+3. pip install -r requirements.txt
+4. export ELEVENLABS_API_KEY="你本机的 Key"   # 只放在服务端，不要写进网页或仓库
+5. uvicorn app:app --host 127.0.0.1 --port 8765，打开 http://127.0.0.1:8765
+（或双击 启动_Mac.command）
+
+六、主要接口（v0.5 新增）
+POST /api/video                                上传视频，创建项目
+POST /api/sample                               创建示例项目
+GET  /api/projects/{id}                        项目详情：素材库 + 时间轴 + 识别结果
+PUT  /api/projects/{id}/timeline               保存时间轴
+POST /api/projects/{id}/assets/upload          导入音频（kind=music|sfx）
+POST /api/projects/{id}/assets/generate-music  {mode: video|text, prompt, ...}
+POST /api/projects/{id}/assets/generate-sfx    {prompt, duration_seconds, loop}
+POST /api/projects/{id}/speech                 用户触发识别（Scribe v2）；已识别直接返回缓存，不重复计费
+POST /api/projects/{id}/mixdown                {timeline, stem: soundtrack|music|sfx|full} -> WAV
+GET  /api/projects/{id}/exports/{stem}.wav
+fc_worker.py 支持 {"type": "mixdown", ...} 清单，可直接作为 FC 混音函数的执行核心。
+
+七、边界
+- 无登录/多租户/配额，不可直接部署公网。
+- 真实 ElevenLabs 生成接口按官方文档接入，测试使用 Mock；上线前需用真实账号验证一次。
+- 单视频不超过 600 秒、100MB（Demo 限制）。
+- 开发：改 frontend/ 后执行 python3 scripts/build_frontend.py；测试 pytest -q

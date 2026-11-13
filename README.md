@@ -1,4 +1,4 @@
-# SoundFlow Studio
+# ElevenLabs Video Audio Studio
 
 **A soundtrack timeline that gives motion-comic dialogue room to breathe.**
 
